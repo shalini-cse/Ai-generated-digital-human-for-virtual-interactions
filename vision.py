@@ -9,6 +9,7 @@ from PIL import Image
 import io
 import logging
 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
