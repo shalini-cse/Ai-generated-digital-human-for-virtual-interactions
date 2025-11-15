@@ -8,41 +8,6 @@ MAX_RETRIES = 1
 TIMEOUT = 20
 
 # ✅ TRY IMPORTING OLLAMA WITH ERROR HANDLING
-try:
-    import ollama
-    OLLAMA_AVAILABLE = True
-    logger.info("✅ Ollama library imported successfully")
-except ImportError as e:
-    OLLAMA_AVAILABLE = False
-    logger.error(f"❌ Failed to import ollama: {e}")
-    logger.error("Run: pip install ollama --upgrade")
-
-def detect_emotion_from_text(text: str):
-    """Detect emotion from text"""
-    if not text:
-        return "neutral", 0.5
-    
-    t = text.lower()
-    
-    # Happy
-    if any(w in t for w in ["thank", "thanks", "great", "good", "happy", "glad", "nice", 
-                             "धन्यवाद", "अच्छा", "நன்றி", "ధన్యవాదాలు", "ಧನ್ಯವಾದ", "നന്ദി"]):
-        return "happy", 0.8
-    
-    # Sad
-    if any(w in t for w in ["sorry", "sad", "unhappy", "खेद", "दुखी", "வருத்தம்", 
-                             "క్షమించండి", "క్షమించి", "క్షమిక్కణం"]):
-        return "sad", 0.7
-    
-    # Surprised
-    if any(w in t for w in ["wow", "amazing", "surprise", "वाह", "ஆச்சரியம்", 
-                             "ఆశ్చర్యం", "ಆಶ್ಚರ್ಯ", "ആശ്ചര്യം"]):
-        return "surprised", 0.75
-    
-    # Curious
-    if any(w in t for w in ["wonder", "curious", "think", "?", "जिज्ञासा", "ஆர்வம்", 
-                             "ఉత్సుకత", "ಕುತೂಹಲ", "കൗതുകം"]):
-        return "curious", 0.7
     
     return "neutral", 0.5
 
@@ -87,24 +52,7 @@ def ask_phi(message: str, lang: str = "en", timeout: int = TIMEOUT) -> str:
                     "top_p": 0.9
                 }
             )
-            
-            # Extract response
-            reply = ""
-            
-            if isinstance(response, dict):
-                if "message" in response and isinstance(response["message"], dict):
-                    reply = response["message"].get("content", "")
-                elif "response" in response:
-                    reply = response["response"]
-            elif hasattr(response, "message"):
-                reply = response.message.content if hasattr(response.message, "content") else str(response.message)
-            else:
-                reply = str(response)
-            
-            reply = reply.strip()
-            
-            if not reply:
-                raise ValueError("Empty response from Phi")
+        
             
             # Limit to 2 sentences max
             sentences = [s.strip() for s in reply.replace('। ', '. ').split('. ') if s.strip()]
@@ -138,23 +86,7 @@ def ask_phi(message: str, lang: str = "en", timeout: int = TIMEOUT) -> str:
     }
     return error_messages.get(lang, error_messages["en"])
 
-def translate_to_english(text, source_lang):
-    """Translate to English"""
-    if source_lang == "en":
-        return text
-    
-    try:
-        logger.info(f"🌐 Translating [{source_lang}] → [en]")
-        
-        response = ollama.chat(
-            model="phi",
-            messages=[
-                {"role": "system", "content": "Translate to English. Only output the translation."},
-                {"role": "user", "content": text}
-            ],
-            options={"temperature": 0.3, "num_predict": 100}
-        )
-        
+
         if isinstance(response, dict) and "message" in response:
             return response["message"].get("content", "").strip() or text
         return text
@@ -185,17 +117,6 @@ def translate_from_english(text, target_lang):
         return text
     except:
         return text
-
-def ask_phi_with_emotion(message: str, lang: str = "en"):
-    """✅ Ask Phi with translation support"""
-    try:
-        # Translate to English if needed
-        english_msg = translate_to_english(message, lang) if lang != "en" else message
-        
-        logger.info(f"🤖 Phi (English): '{english_msg[:50]}...'")
-        
-        # Get response in English
-        reply = ask_phi(english_msg, lang="en")
         
         # Translate back to user's language
         if lang != "en":
@@ -274,14 +195,6 @@ if __name__ == "__main__":
     # Test Hindi
     print("\n" + "=" * 70)
     print("TEST 3: Hindi query")
-    try:
-        start = time.time()
-        reply, emotion, intensity = ask_phi_with_emotion("नमस्ते, आप कैसे हैं?", lang="hi")
-        elapsed = time.time() - start
-        print(f"✅ Response ({elapsed:.2f}s): {reply}")
-        print(f"   Emotion: {emotion} ({intensity})")
-    except Exception as e:
-        print(f"❌ Failed: {type(e).__name__}: {e}")
     
     # Test unique answers
     print("\n" + "=" * 70)
