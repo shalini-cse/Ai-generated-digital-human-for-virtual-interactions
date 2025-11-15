@@ -1,1 +1,677 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lip Sync Diagnostic Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        body {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #60a5fa;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        h2 {
+            color: #818cf8;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        h3 {
+            color: #a78bfa;
+            margin: 15px 0 10px;
+            font-size: 16px;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 500px;
+            background: #0f172a;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            padding: 10px;
+            background: #334155;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .status.success {
+            background: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .status.error {
+            background: #7f1d1d;
+            border-left: 4px solid #ef4444;
+        }
+
+        .status.warning {
+            background: #78350f;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .status.info {
+            background: #1e3a8a;
+            border-left: 4px solid #3b82f6;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #7c3aed;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #6d28d9;
+        }
+
+        button:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+        }
+
+        .morph-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .morph-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            background: #1e293b;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .morph-name {
+            color: #60a5fa;
+            flex: 1;
+        }
+
+        .morph-value {
+            color: #10b981;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .slider {
+            width: 150px;
+            margin-left: 10px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .log {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 6px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.6;
+            margin-top: 15px;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #334155;
+            padding-left: 10px;
+        }
+
+        .log-success { border-left-color: #10b981; color: #10b981; }
+        .log-error { border-left-color: #ef4444; color: #ef4444; }
+        .log-info { border-left-color: #3b82f6; color: #3b82f6; }
+        .log-warning { border-left-color: #f59e0b; color: #f59e0b; }
+
+        .test-area {
+            background: #334155;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .value-display {
+            display: inline-block;
+            background: #0f172a;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-left: 10px;
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        code {
+            background: #0f172a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #60a5fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge.required { background: #7f1d1d; color: #fca5a5; }
+        .badge.optional { background: #1e3a8a; color: #93c5fd; }
+        .badge.found { background: #065f46; color: #6ee7b7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel: 3D View -->
+        <div class="panel">
+            <h1>🎭 Your Avatar - Live View</h1>
+            <div id="canvas-container"></div>
+            
+            <h3>Quick Actions</h3>
+            <div class="controls">
+                <button onclick="loadAvatar()">🔄 Reload Avatar</button>
+                <button onclick="testSpeech()">🗣️ Test Speech</button>
+                <button onclick="resetMorphs()">↺ Reset All</button>
+            </div>
+
+            <h3>Manual Mouth Control (Test)</h3>
+            <div class="test-area">
+                <label>Mouth Open: <span class="value-display" id="mouth-value">0.0</span></label>
+                <input type="range" id="mouth-slider" min="0" max="100" value="0" oninput="updateManualMouth(this.value)">
+                
+                <label>Jaw Open: <span class="value-display" id="jaw-value">0.0</span></label>
+                <input type="range" id="jaw-slider" min="0" max="100" value="0" oninput="updateManualJaw(this.value)">
+            </div>
+        </div>
+
+        <!-- Right Panel: Diagnostics -->
+        <div class="panel">
+            <h1>🔍 Lip Sync Diagnostic Report</h1>
+            
+            <h2>Status Checks</h2>
+            <div id="status-checks"></div>
+
+            <h2>Available Morph Targets</h2>
+            <div id="morph-info"></div>
+
+            <h2>Console Log</h2>
+            <div class="log" id="console-log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer, avatar, clock;
+        let morphTargets = [];
+        let meshesWithMorphs = [];
+        let audioContext, analyser;
+
+        // Logging function
+        function log(message, type = 'info') {
+            console.log(`[${type.toUpperCase()}]`, message);
+            
+            const logDiv = document.getElementById('console-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Update status check
+        function updateStatus(id, message, type) {
+            const statusDiv = document.getElementById('status-checks');
+            let statusEl = document.getElementById(id);
+            
+            if (!statusEl) {
+                statusEl = document.createElement('div');
+                statusEl.id = id;
+                statusEl.className = 'status';
+                statusDiv.appendChild(statusEl);
+            }
+            
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+        }
+
+        // Initialize Three.js
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            
+            camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 0.2, 2.5);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 8, 5);
+            scene.add(directionalLight);
+            
+            clock = new THREE.Clock();
+            
+            log('Scene initialized successfully', 'success');
+            updateStatus('scene', '✓ 3D Scene initialized', 'success');
+            
+            loadAvatar();
+            animate();
+        }
+
+        // Load Avatar
+        function loadAvatar() {
+            log('Loading avatar from URL...', 'info');
+            updateStatus('avatar', '⏳ Loading avatar...', 'info');
+            
+            const loader = new THREE.GLTFLoader();
+            const avatarURL = 'https://models.readyplayer.me/68497e671a5c93881e8e6acd.glb';
+            
+            loader.load(
+                avatarURL,
+                function(gltf) {
+                    // Remove old avatar if exists
+                    if (avatar) {
+                        scene.remove(avatar);
+                    }
+                    
+                    avatar = gltf.scene;
+                    avatar.position.set(0, -1.8, 0);
+                    avatar.scale.set(2.2, 2.2, 2.2);
+                    scene.add(avatar);
+                    
+                    log('Avatar loaded successfully!', 'success');
+                    updateStatus('avatar', '✓ Avatar loaded', 'success');
+                    
+                    // Analyze morph targets
+                    analyzeMorphTargets();
+                },
+                function(progress) {
+                    const percent = (progress.loaded / progress.total * 100).toFixed(0);
+                    log(`Loading: ${percent}%`, 'info');
+                },
+                function(error) {
+                    log(`Error loading avatar: ${error.message}`, 'error');
+                    updateStatus('avatar', '✗ Failed to load avatar', 'error');
+                }
+            );
+        }
+
+        // Analyze Morph Targets
+        function analyzeMorphTargets() {
+            log('Analyzing avatar for morph targets...', 'info');
+            
+            meshesWithMorphs = [];
+            morphTargets = [];
+            
+            avatar.traverse((child) => {
+                if (child.isMesh) {
+                    log(`Found mesh: ${child.name}`, 'info');
+                    
+                    if (child.morphTargetInfluences && child.morphTargetDictionary) {
+                        meshesWithMorphs.push(child);
+                        
+                        log(`✓ Mesh "${child.name}" has morph targets!`, 'success');
+                        log(`  Total morph targets: ${child.morphTargetInfluences.length}`, 'info');
+                        
+                        // Store all unique morph target names
+                        Object.keys(child.morphTargetDictionary).forEach(name => {
+                            if (!morphTargets.includes(name)) {
+                                morphTargets.push(name);
+                            }
+                        });
+                    } else {
+                        log(`  Mesh "${child.name}" has NO morph targets`, 'warning');
+                    }
+                }
+            });
+            
+            if (meshesWithMorphs.length === 0) {
+                log('⚠️ WARNING: No meshes with morph targets found!', 'error');
+                updateStatus('morphs', '✗ No morph targets found', 'error');
+                displayNoMorphTargetsHelp();
+            } else {
+                log(`✓ Found ${meshesWithMorphs.length} mesh(es) with morph targets`, 'success');
+                log(`✓ Total unique morph targets: ${morphTargets.length}`, 'success');
+                updateStatus('morphs', `✓ Found ${morphTargets.length} morph targets`, 'success');
+                
+                displayMorphTargets();
+                checkLipSyncTargets();
+            }
+        }
+
+        // Check for lip sync specific targets
+        function checkLipSyncTargets() {
+            log('Checking for lip sync morph targets...', 'info');
+            
+            const requiredTargets = ['mouthOpen', 'jawOpen'];
+            const optionalTargets = ['viseme_aa', 'viseme_E', 'viseme_I', 'viseme_O', 'viseme_U', 
+                                     'viseme_PP', 'viseme_FF', 'viseme_TH', 'viseme_DD', 
+                                     'viseme_kk', 'viseme_CH', 'viseme_SS', 'viseme_nn', 'viseme_RR'];
+            
+            let foundRequired = 0;
+            let foundOptional = 0;
+            
+            requiredTargets.forEach(target => {
+                if (morphTargets.includes(target)) {
+                    log(`✓ Found REQUIRED target: ${target}`, 'success');
+                    foundRequired++;
+                } else {
+                    log(`✗ Missing REQUIRED target: ${target}`, 'error');
+                }
+            });
+            
+            optionalTargets.forEach(target => {
+                if (morphTargets.includes(target)) {
+                    log(`✓ Found optional target: ${target}`, 'success');
+                    foundOptional++;
+                }
+            });
+            
+            if (foundRequired === requiredTargets.length) {
+                updateStatus('lipsync', `✓ Lip sync ready! (${foundRequired} required + ${foundOptional} optional targets)`, 'success');
+                log('✓ Lip sync should work!', 'success');
+            } else {
+                updateStatus('lipsync', `⚠️ Missing ${requiredTargets.length - foundRequired} required targets`, 'warning');
+                log('⚠️ Basic lip sync may not work properly', 'warning');
+            }
+        }
+
+        // Display morph targets
+        function displayMorphTargets() {
+            const morphInfo = document.getElementById('morph-info');
+            
+            if (morphTargets.length === 0) {
+                morphInfo.innerHTML = '<div class="status error">No morph targets found!</div>';
+                return;
+            }
+            
+            const listDiv = document.createElement('div');
+            listDiv.className = 'morph-list';
+            
+            // Categorize morph targets
+            const lipSyncTargets = morphTargets.filter(name => 
+                name.includes('mouth') || name.includes('jaw') || name.includes('viseme')
+            );
+            const expressionTargets = morphTargets.filter(name => 
+                name.includes('eye') || name.includes('brow') || name.includes('smile') || name.includes('frown')
+            );
+            const otherTargets = morphTargets.filter(name => 
+                !lipSyncTargets.includes(name) && !expressionTargets.includes(name)
+            );
+            
+            function addCategory(title, targets, badgeType) {
+                if (targets.length === 0) return;
+                
+                const header = document.createElement('h3');
+                header.textContent = title;
+                header.style.color = '#a78bfa';
+                header.style.margin = '10px 0';
+                listDiv.appendChild(header);
+                
+                targets.forEach(name => {
+                    const item = document.createElement('div');
+                    item.className = 'morph-item';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'morph-name';
+                    nameSpan.textContent = name;
+                    
+                    const badge = document.createElement('span');
+                    badge.className = `badge ${badgeType}`;
+                    badge.textContent = badgeType;
+                    
+                    const valueSpan = document.createElement('span');
+                    valueSpan.className = 'morph-value';
+                    valueSpan.id = `morph-${name}`;
+                    valueSpan.textContent = '0.00';
+                    
+                    item.appendChild(nameSpan);
+                    item.appendChild(badge);
+                    item.appendChild(valueSpan);
+                    listDiv.appendChild(item);
+                });
+            }
+            
+            addCategory('🗣️ Lip Sync Targets', lipSyncTargets, 'required');
+            addCategory('😊 Expression Targets', expressionTargets, 'optional');
+            addCategory('📋 Other Targets', otherTargets, 'optional');
+            
+            morphInfo.innerHTML = '';
+            morphInfo.appendChild(listDiv);
+        }
+
+        // Display help if no morph targets
+        function displayNoMorphTargetsHelp() {
+            const morphInfo = document.getElementById('morph-info');
+            morphInfo.innerHTML = `
+                <div class="status error">
+                    <strong>⚠️ No Morph Targets Found!</strong><br><br>
+                    Your avatar doesn't have morph targets for lip sync.<br><br>
+                    <strong>Solutions:</strong><br>
+                    1. Download a new avatar from Ready Player Me with "full body" option<br>
+                    2. Make sure the avatar was exported with morph targets enabled<br>
+                    3. Try a different avatar URL<br>
+                    4. Check if the GLB file is corrupted
+                </div>
+            `;
+        }
+
+        // Manual morph control (for testing)
+        function updateManualMouth(value) {
+            const normalized = value / 100;
+            document.getElementById('mouth-value').textContent = normalized.toFixed(2);
+            
+            meshesWithMorphs.forEach(mesh => {
+                const index = mesh.morphTargetDictionary['mouthOpen'];
+                if (index !== undefined) {
+                    mesh.morphTargetInfluences[index] = normalized;
+                    updateMorphValueDisplay('mouthOpen', normalized);
+                }
+            });
+        }
+
+        function updateManualJaw(value) {
+            const normalized = value / 100;
+            document.getElementById('jaw-value').textContent = normalized.toFixed(2);
+            
+            meshesWithMorphs.forEach(mesh => {
+                const index = mesh.morphTargetDictionary['jawOpen'];
+                if (index !== undefined) {
+                    mesh.morphTargetInfluences[index] = normalized;
+                    updateMorphValueDisplay('jawOpen', normalized);
+                }
+            });
+        }
+
+        function updateMorphValueDisplay(name, value) {
+            const el = document.getElementById(`morph-${name}`);
+            if (el) {
+                el.textContent = value.toFixed(2);
+                el.style.color = value > 0 ? '#10b981' : '#6b7280';
+            }
+        }
+
+        function resetMorphs() {
+            meshesWithMorphs.forEach(mesh => {
+                mesh.morphTargetInfluences.fill(0);
+            });
+            document.getElementById('mouth-slider').value = 0;
+            document.getElementById('jaw-slider').value = 0;
+            document.getElementById('mouth-value').textContent = '0.0';
+            document.getElementById('jaw-value').textContent = '0.0';
+            
+            morphTargets.forEach(name => updateMorphValueDisplay(name, 0));
+            log('Reset all morph targets to 0', 'info');
+        }
+
+        // Test speech with lip sync
+        function testSpeech() {
+            log('Testing speech with lip sync...', 'info');
+            updateStatus('speech', '🗣️ Speaking...', 'info');
+            
+            const text = "Hello! Testing lip sync. Watch my mouth move as I speak. The quick brown fox jumps over the lazy dog.";
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            
+            utterance.onstart = () => {
+                log('Speech started', 'success');
+                startLipSyncAnimation();
+            };
+            
+            utterance.onend = () => {
+                log('Speech ended', 'success');
+                updateStatus('speech', '✓ Speech test complete', 'success');
+                resetMorphs();
+            };
+            
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Lip sync animation
+        function startLipSyncAnimation() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.8;
+            }
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            let prevValue = 0;
+            
+            function animate() {
+                if (!window.speechSynthesis.speaking) {
+                    resetMorphs();
+                    return;
+                }
+                
+                analyser.getByteFrequencyData(dataArray);
+                const speechBins = dataArray.slice(3, 12);
+                const avg = speechBins.reduce((sum, val) => sum + val, 0) / speechBins.length;
+                
+                const target = Math.min(avg / 100, 1);
+                const smoothed = prevValue * 0.7 + target * 0.3;
+                prevValue = smoothed;
+                
+                const value = smoothed * (0.85 + Math.random() * 0.15);
+                
+                // Update mouth morphs
+                meshesWithMorphs.forEach(mesh => {
+                    const mouthIndex = mesh.morphTargetDictionary['mouthOpen'];
+                    const jawIndex = mesh.morphTargetDictionary['jawOpen'];
+                    
+                    if (mouthIndex !== undefined) {
+                        mesh.morphTargetInfluences[mouthIndex] = value * 0.9;
+                        updateMorphValueDisplay('mouthOpen', value * 0.9);
+                    }
+                    
+                    if (jawIndex !== undefined) {
+                        mesh.morphTargetInfluences[jawIndex] = value * 0.7;
+                        updateMorphValueDisplay('jawOpen', value * 0.7);
+                    }
+                    
+                    // Randomly activate visemes
+                    ['viseme_aa', 'viseme_E', 'viseme_I', 'viseme_O', 'viseme_U'].forEach(viseme => {
+                        const index = mesh.morphTargetDictionary[viseme];
+                        if (index !== undefined && Math.random() > 0.7) {
+                            const visemeValue = value * Math.random() * 0.6;
+                            mesh.morphTargetInfluences[index] = visemeValue;
+                            updateMorphValueDisplay(viseme, visemeValue);
+                        }
+                    });
+                });
+                
+                // Update sliders
+                document.getElementById('mouth-slider').value = value * 100;
+                document.getElementById('mouth-value').textContent = (value * 0.9).toFixed(2);
+                document.getElementById('jaw-slider').value = value * 70;
+                document.getElementById('jaw-value').textContent = (value * 0.7).toFixed(2);
+                
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        // Initialize
+        window.onload = function() {
+            initScene();
+            log('Diagnostic tool initialized', 'success');
+            log('Your avatar URL: https://models.readyplayer.me/68497e6333371a5c93881e8e6acd.glb', 'info');
+        };
+    </script>
+</body>
