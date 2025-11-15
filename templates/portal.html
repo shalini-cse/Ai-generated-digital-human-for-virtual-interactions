@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Digital Human - Portal</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #141e30, #243b55);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1.2rem;
+            color: #00d4ff;
+        }
+        form {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+        label {
+            display: block;
+            margin-top: 1rem;
+            font-size: 1rem;
+        }
+        select, button {
+            width: 100%;
+            padding: 0.6rem;
+            font-size: 1rem;
+            margin-top: 0.3rem;
+            border-radius: 8px;
+            border: none;
+        }
+        button {
+            background: #00d4ff;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 1.5rem;
+        }
+        button:hover {
+            background: #00b5cc;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Digital Human</h1>
+    <form action="/chat" method="POST">
+        <label for="language">Choose Language:</label>
+        <select name="language" id="language" required>
+            <option value="en">English</option>
+            <option value="hi">Hindi</option>
+            <option value="te">Telugu</option>
+            <option value="ta">Tamil</option>
+            <option value="bn">Bengali</option>
+            <option value="ml">Malayalam</option>
+            <option value="kn">Kannada</option>
+            <option value="gu">Gujarati</option>
+            <option value="mr">Marathi</option>
+            <option value="pa">Punjabi</option>
+        </select>
+
+        <label for="accessibility">Accessibility Option:</label>
+        <select name="accessibility" id="access" required>
+            <option value="normal">Normal</option>
+            <option value="blind">Visually Impaired</option>
+            <option value="deaf">Deaf</option>
+            <option value="mute">Mute (Non-verbal)</option>
+        </select>
+
+        <button type="submit">Enter Assistant</button>
+    </form>
+</body>
+</html>

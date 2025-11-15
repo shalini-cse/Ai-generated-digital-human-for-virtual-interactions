@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Digital Human - Vision Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .page-container {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .page-container.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .welcome-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            max-width: 600px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* ✅ Enhanced Language Selector */
+        #language-select {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            border: 3px solid white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        #language-select:hover {
+            background: rgba(255, 255, 255, 0.35);
+            transform: scale(1.02);
+        }
+
+        #language-select:focus {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            border-color: #4CAF50;
+        }
+
+        #language-select option {
+            background: #764ba2;
+            color: white;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        .selection-button {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            color: white;
+            font-weight: 500;
+        }
+
+        .selection-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .selection-button.selected {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            border-color: white;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+            transform: scale(1.05);
+        }
+
+        .main-chat-container {
+            display: flex;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            width: 95vw;
+            max-width: 1600px;
+            height: 92vh;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #avatar-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 100%);
+        }
+
+        #avatar-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        #live-caption {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-size: 18px;
+            max-width: 85%;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        #emotion-indicator {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 400px;
+        }
+
+        #chatDisplay {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        #chatDisplay::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #chatDisplay::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        #chatDisplay::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        .message {
+            padding: 1.2rem 1.5rem;
+            border-radius: 20px;
+            max-width: 80%;
+            word-wrap: break-word;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            animation: messageSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            white-space: pre-wrap;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            align-self: flex-end;
+            border-bottom-right-radius: 6px;
+        }
+
+        .ai-message {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            align-self: flex-start;
+            border-bottom-left-radius: 6px;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 1.5rem;
+            gap: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            align-items: center;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border-radius: 25px;
+            border: none;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            outline: none;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        #chatInput:focus {
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 1rem;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: white;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+            width: 56px;
+            height: 56px;
+        }
+
+        .action-button:hover {
+            transform: translateY(-3px) scale(1.1);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .action-button:active {
+            transform: translateY(-1px) scale(1.05);
+        }
+
+        .action-button.listening {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            animation: pulse 1.5s infinite;
+        }
+
+        .action-button.muted {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4);
+            }
+            50% {
+                transform: scale(1.15);
+                box-shadow: 0 10px 30px rgba(255, 107, 107, 0.6);
+            }
+        }
+
+        #status {
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.95);
+            background: rgba(0, 0, 0, 0.25);
+            font-weight: 500;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.25);
+            padding: 1.2rem 1.8rem;
+            border-radius: 20px;
+            border-bottom-left-radius: 6px;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+            gap: 6px;
+        }
+
+        .typing-indicator span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: white;
+            animation: bounce 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-12px);
+            }
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .vision-status {
+            position: absolute;
+            top: 80px;
+            right: 25px;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            display: none;
+            z-index: 100;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .vision-status.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Welcome Page -->
+    <div id="welcome-page" class="page-container active">
+        <div class="welcome-card">
+            <h1 class="text-4xl font-bold mb-6 text-center">AI Digital Human</h1>
+            <p class="text-lg mb-8 text-center text-gray-200">Your intelligent multilingual assistant</p>
+
+            <div class="mb-8">
+                <h2 class="text-2xl font-semibold mb-4">भाषा चुनें / Select Language</h2>
+                <select id="language-select">
+                    <option value="auto">🌐 Auto-Detect (स्वचालित पहचान)</option>
+                    <option value="en-US">🇬🇧 English</option>
+                    <option value="hi-IN">🇮🇳 हिन्दी (Hindi)</option>
+                    <option value="ta-IN">🇮🇳 தமிழ் (Tamil)</option>
+                    <option value="te-IN">🇮🇳 తెలుగు (Telugu)</option>
+                    <option value="kn-IN">🇮🇳 ಕನ್ನಡ (Kannada)</option>
+                    <option value="ml-IN">🇮🇳 മലയാളം (Malayalam)</option>
+                </select>
+            </div>
+
+            <div class="mb-8">
+                <h2 class="text-2xl font-semibold mb-4">Accessibility Mode</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <button class="selection-button" data-mode="normal">👤 Normal</button>
+                    <button class="selection-button" data-mode="visually-impaired">👓 Vision Aid</button>
+                    <button class="selection-button" data-mode="deaf">🤟 Deaf/HoH</button>
+                    <button class="selection-button" data-mode="dumb">🦻 dumb</button>
+                    <button class="selection-button" data-mode="elderly">👴 Elderly</button>
+                </div>
+            </div>
+
+            <button id="start-chat-btn" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 text-lg">
+                Start Chatting 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Chat Page -->
+    <div id="main-chat-page" class="page-container">
+        <div class="main-chat-container">
+            <!-- Avatar Container -->
+            <div id="avatar-container">
+                <div id="emotion-indicator">
+                    <span class="text-2xl">😊</span>
+                    <span>Happy</span>
+                </div>
+                <div id="vision-status" class="vision-status">
+                    👁️ Vision Monitoring Active
+                </div>
+                <div id="live-caption"></div>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <div id="chatDisplay"></div>
+
+                <div class="typing-indicator" id="typingIndicator">
+                    <span></span><span></span><span></span>
+                </div>
+
+                <div class="input-area">
+                    <input type="file" id="imageInput" accept="image/*">
+                    <button class="action-button" onclick="document.getElementById('imageInput').click()" title="Upload Image">
+                        📸
+                    </button>
+                    <input type="text" id="chatInput" placeholder="Type your message..." autocomplete="off">
+                    <button id="sendButton" class="action-button" title="Send Message">
+                        ➤
+                    </button>
+                    <button id="micButton" class="action-button" title="Voice Input">
+                        🎤
+                    </button>
+                    <button id="speechOutputButton" class="action-button" title="Toggle Speech Output">
+                        🔊
+                    </button>
+                </div>
+                
+                <div id="status">Ready to chat</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js GLTFLoader -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <script type="module">
+    // ==================== GLOBAL STATE ====================
+    let selectedLanguage = 'auto';
+    let detectedLanguage = 'en-US';
+    let selectedMode = 'normal';
+    let isSpeechOutputEnabled = true;
+    let socket = null;
+    let hasGreeted = false;
+    let isVisionMonitoringActive = false;
+
+    // ✅ ENHANCED LANGUAGE DETECTION
+    function detectLanguageFromText(text) {
+        const patterns = {
+            'hi-IN': /[\u0900-\u097F]/,  // Devanagari
+            'ta-IN': /[\u0B80-\u0BFF]/,  // Tamil
+            'te-IN': /[\u0C00-\u0C7F]/,  // Telugu
+            'kn-IN': /[\u0C80-\u0CFF]/,  // Kannada
+            'ml-IN': /[\u0D00-\u0D7F]/   // Malayalam
+        };
+        
+        for (const [lang, regex] of Object.entries(patterns)) {
+            if (regex.test(text)) {
+                console.log(`🔍 Detected script: ${lang}`);
+                return lang;
+            }
+        }
+        
+        // English by default
+        return 'en-US';
+    }
+
+    // ✅ GET SPEECH RECOGNITION LANGUAGE CODE
+    function getSpeechRecognitionLang() {
+        if (selectedLanguage === 'auto') {
+            return detectedLanguage;
+        }
+        return selectedLanguage;
+    }
+
+    // ✅ GET API LANGUAGE CODE (without region)
+    function getAPILanguageCode() {
+        const lang = (selectedLanguage === 'auto' ? detectedLanguage : selectedLanguage);
+        return lang.split('-')[0];
+    }
+
+    // ==================== WEBSOCKET SETUP ====================
+    function initializeWebSocket() {
+        if (socket) return;
+        
+        console.log('🔌 Connecting to WebSocket...');
+        
+        socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5
+        });
+
+        socket.on('connect', () => {
+            console.log('✅ WebSocket connected:', socket.id);
+            if (window.digitalHuman) {
+                window.digitalHuman.updateStatus('🔌 Connected');
+            }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('🔌 WebSocket disconnected');
+        });
+
+        // ✅ RECEIVE VISION DETECTIONS
+        socket.on('vision_detection', (data) => {
+            console.log('📥 Vision detection:', data);
+            
+            if (!window.digitalHuman) return;
+            
+            const response = data.response || "Detection received";
+            const detections = data.detections || [];
+            
+            let message = `👁️ ${response}`;
+            
+            if (detections.length > 0) {
+                message += `\n\n📋 Objects detected:\n`;
+                detections.forEach(det => {
+                    message += `• ${det.label} (${(det.confidence * 100).toFixed(0)}%) - ${det.position}\n`;
+                });
+            }
+            
+            window.digitalHuman.addMessage('ai', message);
+            window.digitalHuman.showCaption(response);
+            
+            if (data.emotion) window.digitalHuman.updateEmotion(data.emotion);
+            
+            // ✅ SPEAK + AUTO-REOPEN MIC
+            if (isSpeechOutputEnabled && !window.digitalHuman.isSpeaking) {
+                window.digitalHuman.speak(response).then(() => {
+                    // Reopen mic for visually impaired
+                    if (selectedMode === 'visually-impaired' && !window.digitalHuman.isListening) {
+                        setTimeout(() => {
+                            console.log('🎤 Re-opening mic...');
+                            window.digitalHuman.toggleSpeechInput();
+                        }, 1000);
+                    }
+                });
+            }
+            
+            window.digitalHuman.updateStatus(`Vision: ${data.objects_count || 0} objects`);
+        });
+    }
+
+    // ==================== HTTP POLLING (NO WEBSOCKET) ====================
+    let visionSessionId = null;
+    let visionPollingInterval = null;
+
+    function initializeHTTPConnection() {
+        console.log('✅ HTTP connection ready');
+    }
+
+    function startVisionPolling(language) {
+        if (visionPollingInterval) {
+            console.log('⚠️ Vision already active');
+            return;
+        }
+        
+        // Generate session ID
+        visionSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        console.log(`👁️ Starting vision session: ${visionSessionId}`);
+        
+        // Start monitoring on server
+        fetch('/api/vision/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                session_id: visionSessionId,
+                language: language 
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            console.log('✅ Vision monitoring started:', data);
+            
+            // Start polling every 3 seconds
+            visionPollingInterval = setInterval(pollVisionDetections, 3000);
+        })
+        .catch(err => console.error('❌ Vision start error:', err));
+    }
+
+    function pollVisionDetections() {
+        if (!visionSessionId) return;
+        
+        fetch('/api/vision/poll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: visionSessionId })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'detection' || data.status === 'clear' || data.status === 'error') {
+                handleVisionDetection(data);
+            }
+        })
+        .catch(err => console.error('❌ Vision poll error:', err));
+    }
+
+    function stopVisionPolling() {
+        if (!visionSessionId) return;
+        
+        console.log(`🛑 Stopping vision session: ${visionSessionId}`);
+        
+        // Clear polling
+        if (visionPollingInterval) {
+            clearInterval(visionPollingInterval);
+            visionPollingInterval = null;
+        }
+        
+        // Stop on server
+        fetch('/api/vision/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: visionSessionId })
+        })
+        .then(() => {
+            visionSessionId = null;
+            console.log('✅ Vision monitoring stopped');
+        })
+        .catch(err => console.error('❌ Vision stop error:', err));
+    }
+
+    function handleVisionDetection(data) {
+        console.log('📥 Vision detection:', data);
+
+        if (!window.digitalHuman) return;
+
+        const detections = data.detections || [];
+        const timestamp = new Date().toLocaleTimeString();
+
+        // Only show detected objects, no descriptions or stories
+        let message = `👁️ **[${timestamp}] Objects Detected:**\n`;
+        if (detections.length > 0) {
+            detections.forEach((det, idx) => {
+                const confPercent = (det.confidence * 100).toFixed(1);
+                message += `${idx + 1}. **${det.label}** (${confPercent}% confidence) - ${det.position}\n`;
+            });
+        } else {
+            message += `No objects detected.`;
+        }
+
+        // Add to chat
+        const cd = document.getElementById('chatDisplay');
+        if (cd) {
+            const div = document.createElement('div');
+            div.className = 'message ai-message';
+            div.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            div.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+            div.innerHTML = `<strong>🤖 Vision AI:</strong><br>${message.replace(/\n/g, '<br>')}`;
+            cd.appendChild(div);
+            cd.scrollTop = cd.scrollHeight;
+        }
+
+        window.digitalHuman.showCaption(message);
+
+        if (data.emotion) window.digitalHuman.updateEmotion(data.emotion);
+
+        // Only speak the object list if speech output is enabled
+        if (isSpeechOutputEnabled && !window.digitalHuman.isSpeaking && detections.length > 0) {
+            // Speak only the object list, not any description
+            let speakMsg = detections.map((det, idx) => {
+                const confPercent = (det.confidence * 100).toFixed(1);
+                return `${det.label}, ${det.position}, ${confPercent} percent confidence.`;
+            }).join(' ');
+            window.digitalHuman.speak(speakMsg);
+        }
+    }
+
+    // ==================== ADVANCED DIGITAL HUMAN CLASS ====================
+    class AdvancedDigitalHuman {
+        constructor() {
+            console.log('🚀 Initializing Digital Human...');
+            
+            this.scene = new THREE.Scene();
+            this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+            this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            
+            this.renderer.setClearColor(0x000000, 0);
+            this.renderer.shadowMap.enabled = true;
+            
+            const container = document.getElementById('avatar-container');
+            this.renderer.setSize(container.clientWidth, container.clientHeight);
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(this.renderer.domElement);
+
+            this.setupLighting();
+            this.camera.position.set(0, 1.65, 2.5);
+            this.camera.lookAt(0, 1.6, 0);
+
+            this.avatar = null;
+            this.mixer = null;
+            this.clock = new THREE.Clock();
+            this.isSpeaking = false;
+            this.isListening = false;
+            this.bones = {};
+            this.morphTargets = null;
+            this.lipSyncInterval = null;
+            this.headMovementInterval = null;
+            this.headNodInterval = null;
+            this.idleAnimationInterval = null;
+            this.blinkInterval = null;
+            this.handGestureInterval = null;
+
+            this.initSpeechRecognition();
+            this.loadAvatar();
+            this.animate();
+            
+            window.addEventListener('resize', this.onWindowResize.bind(this));
+        }
+
+        setupLighting() {
+            this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const key = new THREE.DirectionalLight(0xffffff, 1.2);
+            key.position.set(5, 5, 5);
+            key.castShadow = true;
+            this.scene.add(key);
+        }
+
+        loadAvatar() {
+            const loader = new THREE.GLTFLoader();
+            this.updateStatus('Loading avatar...');
+            
+            loader.load(
+                'https://models.readyplayer.me/68497e671a5c93881e8e6acd.glb',
+                (gltf) => {
+                    this.avatar = gltf.scene;
+                    this.scene.add(this.avatar);
+                    this.avatar.traverse((n) => { 
+                        if (n.isMesh) { 
+                            n.castShadow = true; 
+                            n.receiveShadow = true; 
+                        } 
+                    });
+                    this.mixer = new THREE.AnimationMixer(this.avatar);
+                    this.findBonesAndMorphTargets();
+                    this.startIdleAnimations();
+                    this.startBlinking();
+                    this.updateStatus('Ready!');
+                },
+                (p) => this.updateStatus(`Loading... ${(p.loaded/p.total*100).toFixed(0)}%`),
+                (e) => this.updateStatus('Load failed')
+            );
+        }
+
+        findBonesAndMorphTargets() {
+            this.avatar.traverse((node) => {
+                const n = node.name ? node.name.toLowerCase() : '';
+                if (node.isBone || node.type === 'Bone') {
+                    if (n.includes('head') && !n.includes('left') && !n.includes('right')) this.bones.head = node;
+                    if (n.includes('neck')) this.bones.neck = node;
+                    if (n.includes('jaw')) this.bones.jaw = node;
+                    if (n.includes('spine') && !n.includes('1')) this.bones.spine = node;
+                    if (n.includes('rightarm') || n.includes('right_arm') || n.includes('rightshoulder')) this.bones.rightArm = node;
+                    if (n.includes('leftarm') || n.includes('left_arm') || n.includes('leftshoulder')) this.bones.leftArm = node;
+                    if (n.includes('rightforearm') || n.includes('rightelbow')) this.bones.rightForearm = node;
+                    if (n.includes('leftforearm') || n.includes('leftelbow')) this.bones.leftForearm = node;
+                    if (n.includes('righthand')) this.bones.rightHand = node;
+                    if (n.includes('lefthand')) this.bones.leftHand = node;
+                }
+                if (node.isMesh && node.morphTargetDictionary) this.morphTargets = node;
+            });
+        }
+
+        // ✅ IDLE - NO HAND MOVEMENT
+        startIdleAnimations() {
+            this.idleAnimationInterval = setInterval(() => {
+                if (!this.isSpeaking && this.avatar) {
+                    const t = Date.now() * 0.001;
+                    this.avatar.position.y = Math.sin(t * 1.2) * 0.015;
+                    
+                    if (this.bones.head) {
+                        this.bones.head.rotation.y = Math.sin(t * 0.35) * 0.05;
+                        this.bones.head.rotation.x = Math.sin(t * 0.5) * 0.025;
+                    }
+                }
+            }, 50);
+        }
+
+        startBlinking() {
+            const blink = () => {
+                if (this.morphTargets) {
+                    const dict = this.morphTargets.morphTargetDictionary;
+                    for (const name of ['eyesClosed', 'eyeBlinkLeft', 'eyeBlinkRight', 'blink']) {
+                        if (dict[name] !== undefined) {
+                            this.morphTargets.morphTargetInfluences[dict[name]] = 1;
+                            setTimeout(() => { 
+                                if (this.morphTargets) this.morphTargets.morphTargetInfluences[dict[name]] = 0; 
+                            }, 150);
+                            break;
+                        }
+                    }
+                }
+                this.blinkInterval = setTimeout(blink, 2000 + Math.random() * 3000);
+            };
+            blink();
+        }
+
+        // ✅ CONTINUOUS HEAD NOD WHILE SPEAKING
+        startContinuousHeadNod() {
+            console.log('👤 Starting continuous head nod');
+            
+            if (this.headNodInterval) clearInterval(this.headNodInterval);
+            
+            this.headNodInterval = setInterval(() => {
+                if (!this.isSpeaking) {
+                    clearInterval(this.headNodInterval);
+                    this.headNodInterval = null;
+                    // Reset head position
+                    if (this.bones.head) {
+                        this.bones.head.rotation.x = 0;
+                    }
+                    return;
+                }
+                
+                if (this.bones.head) {
+                    const t = Date.now() * 0.006; // Smooth frequency
+                    this.bones.head.rotation.x = Math.sin(t) * 0.15; // Up/down nod
+                }
+            }, 50);
+        }
+
+        // ✅ HAND GESTURES (ONLY WHEN SPEAKING)
+        startNaturalHandGestures() {
+            console.log('✋ Starting hand gestures');
+            
+            if (this.handGestureInterval) clearInterval(this.handGestureInterval);
+            
+            this.handGestureInterval = setInterval(() => {
+                if (!this.isSpeaking) {
+                    clearInterval(this.handGestureInterval);
+                    this.handGestureInterval = null;
+                    this.forceRestPose();
+                    return;
+                }
+                
+                const t = Date.now() * 0.004;
+                
+                // Right arm
+                if (this.bones.rightArm && this.bones.rightForearm && this.bones.rightHand) {
+                    this.bones.rightArm.rotation.z = -0.25 + Math.sin(t * 0.9) * 0.12;
+                    this.bones.rightArm.rotation.x = 0.5 + Math.sin(t * 0.7) * 0.18;
+                    this.bones.rightArm.rotation.y = Math.sin(t * 0.6) * 0.1;
+                    
+                    this.bones.rightForearm.rotation.z = -0.9 + Math.sin(t * 1.2) * 0.35;
+                    this.bones.rightForearm.rotation.y = Math.sin(t * 1.0) * 0.15;
+                    
+                    this.bones.rightHand.rotation.z = Math.sin(t * 1.5) * 0.18;
+                    this.bones.rightHand.rotation.x = Math.sin(t * 1.3) * 0.12;
+                }
+                
+                // Left arm
+                if (this.bones.leftArm && this.bones.leftForearm && this.bones.leftHand) {
+                    const offset = t + Math.PI;
+                    
+                    this.bones.leftArm.rotation.z = 0.25 - Math.sin(offset * 0.9) * 0.12;
+                    this.bones.leftArm.rotation.x = 0.5 + Math.sin(offset * 0.7) * 0.18;
+                    this.bones.leftArm.rotation.y = -Math.sin(offset * 0.6) * 0.1;
+                    
+                    this.bones.leftForearm.rotation.z = 0.9 - Math.sin(offset * 1.2) * 0.35;
+                    this.bones.leftForearm.rotation.y = -Math.sin(offset * 1.0) * 0.15;
+                    
+                    this.bones.leftHand.rotation.z = -Math.sin(offset * 1.5) * 0.18;
+                    this.bones.leftHand.rotation.x = Math.sin(offset * 1.3) * 0.12;
+                }
+                
+            }, 70);
+        }
+
+        stopNaturalHandGestures() {
+            console.log('🛑 Stopping gestures');
+            if (this.handGestureInterval) {
+                clearInterval(this.handGestureInterval);
+                this.handGestureInterval = null;
+            }
+            this.forceRestPose();
+        }
+
+        // ✅ FORCE REST POSE (HANDS DOWN)
+        forceRestPose() {
+            console.log('🧘 Returning to rest');
+            
+            const duration = 400;
+            const steps = 20;
+            const stepTime = duration / steps;
+            let currentStep = 0;
+            
+            const interval = setInterval(() => {
+                const progress = currentStep / steps;
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                
+                ['rightArm', 'leftArm', 'rightForearm', 'leftForearm', 'rightHand', 'leftHand'].forEach(boneName => {
+                    if (this.bones[boneName]) {
+                        this.bones[boneName].rotation.x *= (1 - easeOut);
+                        this.bones[boneName].rotation.y *= (1 - easeOut);
+                        this.bones[boneName].rotation.z *= (1 - easeOut);
+                    }
+                });
+                
+                currentStep++;
+                
+                if (currentStep >= steps) {
+                    clearInterval(interval);
+                    console.log('✅ Rest complete');
+                }
+            }, stepTime);
+        }
+
+        performGesture(gesture) {
+            if (!gesture || gesture === 'none' || gesture === 'talk') return;
+            
+            switch(gesture) {
+                case 'wave':
+                    if (this.bones.rightArm) {
+                        let c = 0;
+                        const iv = setInterval(() => {
+                            this.bones.rightArm.rotation.z = -1.2 + Math.sin(Date.now()*0.015)*0.6;
+                            if (++c > 30) { clearInterval(iv); this.forceRestPose(); }
+                        }, 40);
+                    }
+                    break;
+                case 'nod':
+                    this.performHeadNod();
+                    break;
+            }
+        }
+
+        // ✅ ONE-TIME HEAD NOD
+        performHeadNod() {
+            if (!this.bones.head) return;
+            
+            console.log('👍 Head nod');
+            let count = 0;
+            const nodInterval = setInterval(() => {
+                if (count >= 20) {
+                    clearInterval(nodInterval);
+                    if (this.bones.head) this.bones.head.rotation.x = 0;
+                    return;
+                }
+                if (this.bones.head) {
+                    this.bones.head.rotation.x = Math.sin(Date.now() * 0.02) * 0.3;
+                }
+                count++;
+            }, 50);
+        }
+
+        startLipSync() {
+            console.log('🎤 Starting lip sync');
+            this.isSpeaking = true;
+            
+            // ✅ START CONTINUOUS HEAD NOD
+            this.startContinuousHeadNod();
+            
+            // ✅ START HAND GESTURES
+            setTimeout(() => this.startNaturalHandGestures(), 200);
+            
+            if (this.lipSyncInterval) clearInterval(this.lipSyncInterval);
+            
+            const jawOrig = this.bones.jaw ? this.bones.jaw.rotation.x : 0;
+            
+            this.headMovementInterval = setInterval(() => {
+                if (!this.isSpeaking) { 
+                    clearInterval(this.headMovementInterval); 
+                    return; 
+                }
+                // Slight head sway (in addition to nod)
+                if (this.bones.head) {
+                    const t = Date.now() * 0.003;
+                    this.bones.head.rotation.y += Math.sin(t) * 0.01;
+                    this.bones.head.rotation.z = Math.sin(t * 1.2) * 0.02;
+                }
+            }, 100);
+            
+            this.lipSyncInterval = setInterval(() => {
+                if (!this.isSpeaking) {
+                    clearInterval(this.lipSyncInterval);
+                    if (this.bones.jaw) this.bones.jaw.rotation.x = jawOrig;
+                    if (this.morphTargets) {
+                        const d = this.morphTargets.morphTargetDictionary;
+                        if (d && d['mouthOpen'] !== undefined) {
+                            this.morphTargets.morphTargetInfluences[d['mouthOpen']] = 0;
+                        }
+                    }
+                    return;
+                }
+                
+                const i = 0.3 + Math.random() * 0.5;
+                if (this.bones.jaw) this.bones.jaw.rotation.x = jawOrig + (i * 0.4);
+                if (this.morphTargets) {
+                    const d = this.morphTargets.morphTargetDictionary;
+                    if (d && d['mouthOpen'] !== undefined) {
+                        this.morphTargets.morphTargetInfluences[d['mouthOpen']] = i * 0.7;
+                    }
+                }
+            }, 100);
+        }
+
+        stopLipSync() {
+            console.log('🔇 Stopping lip sync');
+            this.isSpeaking = false;
+            
+            if (this.headNodInterval) clearInterval(this.headNodInterval);
+            if (this.headMovementInterval) clearInterval(this.headMovementInterval);
+            if (this.lipSyncInterval) clearInterval(this.lipSyncInterval);
+            
+            // Reset head
+            if (this.bones.head) {
+                this.bones.head.rotation.x = 0;
+                this.bones.head.rotation.y = 0;
+                this.bones.head.rotation.z = 0;
+            }
+            
+            this.stopNaturalHandGestures(); // ✅ HANDS DOWN
+        }
+
+        updateEmotion(emotion) {
+            const data = {
+                happy: { emoji: '😊', label: 'Happy', color: '#4caf50' },
+                sad: { emoji: '😢', label: 'Sad', color: '#607d8b' },
+                surprised: { emoji: '😲', label: 'Surprised', color: '#ff9800' },
+                neutral: { emoji: '😐', label: 'Neutral', color: '#9e9e9e' },
+                curious: { emoji: '🤔', label: 'Curious', color: '#2196f3' }
+            }[emotion] || { emoji: '😐', label: 'Neutral', color: '#9e9e9e' };
+            
+            const ind = document.getElementById('emotion-indicator');
+            if (ind) {
+                ind.innerHTML = `<span class="text-2xl">${data.emoji}</span><span>${data.label}</span>`;
+                ind.style.background = data.color;
+            }
+        }
+
+        // ✅ VISUALLY IMPAIRED - AUTO CAMERA DETECTION
+        async startVisionAssistMode() {
+            console.log('👁️ Starting vision assist mode');
+            
+            if (!hasGreeted) {
+                // ✅ ASK PERMISSION FIRST
+                const greetings = {
+                    'hi-IN': 'नमस्ते! क्या मैं आपके लिए वस्तुओं का पता लगाऊं? हां या ना बोलें।',
+                    'ta-IN': 'வணக்கம்! நான் பொருட்களைக் கண்டுபிடிக்கட்டுமா? ஆம் அல்லது இல்லை என்று சொல்லுங்கள்.',
+                    'te-IN': 'నమస్కారం! నేను వస్తువులను గుర్తించాలా? అవును లేదా కాదు అని చెప్పండి.',
+                    'kn-IN': 'ನಮಸ್ಕಾರ! ನಾನು ವಸ್ತುಗಳನ್ನು ಪತ್ತೆ ಮಾಡಲಾ? ಹೌದು ಅಥವಾ ಇಲ್ಲ ಎಂದು ಹೇಳಿ.',
+                    'ml-IN': 'നമസ്കാരം! ഞാൻ വസ്തുക്കൾ കണ്ടെത്താൻ പാടുണ്ടോ? അതെ അല്ലെങ്കിൽ ഇല്ല എന്ന് പറയുക.',
+                    'en-US': 'Hello! Should I start detecting objects for you? Please say yes or no.'
+                };
+                
+                const currentLang = getSpeechRecognitionLang();
+                const greeting = greetings[currentLang] || greetings['en-US'];
+                
+                this.addMessage('ai', greeting);
+                this.showCaption(greeting);
+                
+                if (isSpeechOutputEnabled) {
+                    await this.speak(greeting);
+                }
+                
+                hasGreeted = true;
+                
+                // ✅ OPEN MIC TO WAIT FOR YES/NO
+                setTimeout(() => {
+                    if (!this.isListening) this.toggleSpeechInput();
+                }, 1500);
+                
+                return; // ✅ DON'T START VISION YET - WAIT FOR USER
+            }
+            
+            // ✅ START HTTP POLLING
+            if (!isVisionMonitoringActive) {
+                const vs = document.getElementById('vision-status');
+                if (vs) vs.classList.add('active');
+                
+                startVisionPolling(getSpeechRecognitionLang());
+                isVisionMonitoringActive = true;
+                
+                setTimeout(() => {
+                    if (!this.isListening) this.toggleSpeechInput();
+                }, 1500);
+            }
+        }
+
+        stopVisionMonitoring() {
+            console.log('🛑 Stopping vision');
+            
+            const vs = document.getElementById('vision-status');
+            if (vs) vs.classList.remove('active');
+            
+            stopVisionPolling();
+            isVisionMonitoringActive = false;
+        }
+
+        // ✅ PROCESS USER INPUT
+        // ✅ PROCESS USER INPUT WITH TRANSLATION
+async processUserInput(text) {
+    if (!text || !text.trim()) return;
+    
+    const lowerText = text.toLowerCase();
+    
+    // ✅ AUTO-DETECT LANGUAGE
+    if (selectedLanguage === 'auto') {
+        const detectedLang = detectLanguageFromText(text);
+        if (detectedLang !== detectedLanguage) {
+            detectedLanguage = detectedLang;
+            console.log(`🔍 Language detected: ${detectedLanguage}`);
+            
+            if (this.recognition) {
+                this.recognition.lang = detectedLanguage;
+            }
+        }
+    }
+    
+    // ✅ CHECK FOR VISION PERMISSION (ONLY IN VISION AID MODE, BEFORE VISION STARTS)
+    if (selectedMode === 'visually-impaired' && !isVisionMonitoringActive) {
+        const yesKeywords = ['yes', 'yeah', 'start', 'okay', 'ok', 'sure', 'हां', 'हाँ', 'शुरू', 'ठीक', 'ஆம்', 'சரி', 'అవును', 'సరే', 'ಹೌದು', 'ಸರಿ', 'അതെ', 'ശരി'];
+        const noKeywords = ['no', 'nope', 'don\'t', 'not', 'नहीं', 'मत', 'இல்லை', 'வேண்டாம்', 'కాదు', 'వద్దు', 'ಇಲ್ಲ', 'ಬೇಡ', 'ഇല്ല', 'വേണ്ട'];
+        
+        if (yesKeywords.some(word => lowerText.includes(word))) {
+            console.log('✅ User said YES - Starting vision detection');
+            
+            this.addMessage('user', text);
+            
+            const confirmMessages = {
+                'hi-IN': 'ठीक है! मैं अब वस्तुओं का पता लगाना शुरू करूंगा। कैमरा खुल रहा है...',
+                'ta-IN': 'சரி! இப்போது பொருட்களைக் கண்டுபிடிக்க ஆரம்பிக்கிறேன். கேமரா திறக்கிறது...',
+                'te-IN': 'సరే! ఇప్పుడు వస్తువులను గుర్తించడం ప్రారంభిస్తాను. కెమెరా తెరుచుకుంటోంది...',
+                'kn-IN': 'ಸರಿ! ಈಗ ವಸ್ತುಗಳನ್ನು ಪತ್ತೆ ಮಾಡಲು ಪ್ರಾರಂಭಿಸುತ್ತೇನೆ. ಕ್ಯಾಮೆರಾ ತೆರೆಯುತ್ತಿದೆ...',
+                'ml-IN': 'ശരി! ഇപ്പോൾ വസ്തുക്കൾ കണ്ടെത്താൻ തുടങ്ങുന്നു. ക്യാമറ തുറക്കുന്നു...',
+                'en-US': 'Okay! I will start detecting objects now. Opening camera...'
+            };
+            
+            const confirmMsg = confirmMessages[getSpeechRecognitionLang()] || confirmMessages['en-US'];
+            this.addMessage('ai', confirmMsg);
+            
+            if (isSpeechOutputEnabled) {
+                await this.speak(confirmMsg);
+            }
+            
+            // ✅ START VISION MONITORING
+            const vs = document.getElementById('vision-status');
+            if (vs) vs.classList.add('active');
+            
+            startVisionPolling(getSpeechRecognitionLang());
+            isVisionMonitoringActive = true;
+            
+            // Re-open mic after confirming
+            setTimeout(() => {
+                if (!this.isListening) this.toggleSpeechInput();
+            }, 1500);
+            
+            return; // Don't process as normal chat
+        }
+        
+        if (noKeywords.some(word => lowerText.includes(word))) {
+            console.log('❌ User said NO - Continuing normal chat');
+            
+            this.addMessage('user', text);
+            
+            const normalMessages = {
+                'hi-IN': 'ठीक है! मैं सामान्य चैट मोड में रहूंगा। आप मुझसे कुछ भी पूछ सकते हैं।',
+                'ta-IN': 'சரி! நான் சாதாரண அரட்டை பயன்முறையில் இருப்பேன். என்னிடம் எதையும் கேட்கலாம்.',
+                'te-IN': 'సరే! నేను సాధారణ చాట్ మోడ్‌లో ఉంటాను. మీరు నన్ను ఏదైనా అడగవచ్చు.',
+                'kn-IN': 'ಸರಿ! ನಾನು ಸಾಮಾನ್ಯ ಚಾಟ್ ಮೋಡ್‌ನಲ್ಲಿರುತ್ತೇನೆ. ನೀವು ನನ್ನನ್ನು ಏನು ಬೇಕಾದರೂ ಕೇಳಬಹುದು.',
+                'ml-IN': 'ശരി! ഞാൻ സാധാരണ ചാറ്റ് മോഡിൽ ആയിരിക്കും. നിങ്ങൾക്ക് എന്നോട് എന്തും ചോദിക്കാം.',
+                'en-US': 'Okay! I will stay in normal chat mode. You can ask me anything.'
+            };
+            
+            const normalMsg = normalMessages[getSpeechRecognitionLang()] || normalMessages['en-US'];
+            this.addMessage('ai', normalMsg);
+            
+            if (isSpeechOutputEnabled) {
+                await this.speak(normalMsg);
+            }
+            
+            // Re-open mic
+            setTimeout(() => {
+                if (!this.isListening) this.toggleSpeechInput();
+            }, 1500);
+            
+            return; // Don't process as normal chat
+        }
+    }
+    
+    // ✅ NORMAL AI CHAT - Now backend handles all translation automatically
+    this.addMessage('user', text);
+    this.updateStatus('Thinking...');
+    this.showTypingIndicator(true);
+
+    try {
+        const apiLang = getAPILanguageCode();
+        
+        console.log(`📤 Sending to /phi: "${text}" [${apiLang}]`);
+        console.log(`🌐 Backend will auto-translate: ${apiLang} → English → AI → English → ${apiLang}`);
+        
+        // ✅ TIMEOUT FOR FETCH
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 30 second timeout (more time for translation)
+        
+        // Send original text in user's language - backend handles translation
+        const resp = await fetch('/phi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                user_input: text,  // Original text in user's language
+                language: apiLang   // User's language code
+            }),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            console.error(`❌ HTTP ${resp.status}: ${errorText}`);
+            throw new Error(`Server error: ${resp.status}`);
+        }
+
+        const result = await resp.json();
+        console.log('📥 Response from /phi:', result);
+        
+        // Response is already translated by backend
+        const aiResp = result.response || "I'm having trouble responding.";
+        
+        this.showTypingIndicator(false);
+        this.addMessage('ai', aiResp);
+        this.showCaption(aiResp);
+        
+        if (result.emotion) this.updateEmotion(result.emotion);
+        if (result.gesture) this.performGesture(result.gesture);
+
+        // ✅ DEAF MODE - ONLY CAPTIONS, NO SPEECH
+        if (selectedMode === 'deaf') {
+            this.updateStatus('Ready (Captions only)');
+            console.log('🔇 Deaf mode: Speech disabled');
+        } else if (isSpeechOutputEnabled) {
+            await this.speak(aiResp);
+            
+            // ✅ RE-OPEN MIC FOR VISION AID MODE
+            if (selectedMode === 'visually-impaired') {
+                setTimeout(() => {
+                    if (!this.isListening) {
+                        console.log('🎤 Re-opening mic for vision mode...');
+                        this.toggleSpeechInput();
+                    }
+                }, 1000);
+            }
+        } else {
+            this.updateStatus('Ready');
+        }
+
+    } catch (err) {
+        console.error('❌ Fetch error:', err);
+        this.showTypingIndicator(false);
+        
+        let errorMsg = "I'm having trouble connecting to the AI.";
+        
+        if (err.name === 'AbortError') {
+            errorMsg = "Request timed out. Please try again with a shorter question.";
+        } else if (err.message.includes('Failed to fetch')) {
+            errorMsg = "Server is not responding. Please check if it's running.";
+        }
+        
+        this.addMessage('ai', errorMsg);
+        this.updateStatus('Ready');
+    }
+}
+        // ✅ SPEAK IN DETECTED LANGUAGE
+        speak(text) {
+            return new Promise((resolve) => {
+                if (!('speechSynthesis' in window)) {
+                    resolve();
+                    return;
+                }
+                
+                speechSynthesis.cancel();
+                
+                const speechLang = getSpeechRecognitionLang();
+                
+                console.log(`🗣️ Speaking [${speechLang}]: ${text.substring(0, 30)}...`);
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = speechLang;
+                utterance.rate = selectedMode === 'elderly' ? 0.75 : 0.9;
+                utterance.pitch = 1.0;
+
+                utterance.onstart = () => {
+                    this.startLipSync();
+                    this.updateStatus('Speaking...');
+                };
+
+                utterance.onend = () => {
+                    this.stopLipSync();
+                    this.updateStatus('Ready');
+                    resolve();
+                };
+
+                utterance.onerror = () => {
+                    this.stopLipSync();
+                    resolve();
+                };
+
+                setTimeout(() => speechSynthesis.speak(utterance), 150);
+            });
+        }
+
+
+        async handleImageUpload(file) {
+            if (!file) return;
+
+            this.updateStatus('Analyzing...');
+            this.showTypingIndicator(true);
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const imgData = e.target.result;
+                    
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = 'message user-message';
+                    msgDiv.innerHTML = `<strong>You:</strong> [Image]<br><img src="${imgData}" style="max-width:200px;border-radius:10px;margin-top:10px;cursor:pointer;" onclick="window.open('${imgData}', '_blank')">`;
+                    document.getElementById('chatDisplay').appendChild(msgDiv);
+                    document.getElementById('chatDisplay').scrollTop = document.getElementById('chatDisplay').scrollHeight;
+
+                    const resp = await fetch('/api/vision', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            image_data: imgData, 
+                            language: getAPILanguageCode() 
+                        })
+                    });
+
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+                    const result = await resp.json();
+                    const desc = result.response || "I see that.";
+                    
+                    this.showTypingIndicator(false);
+                    this.addMessage('ai', desc);
+                    this.showCaption(desc);
+                    this.updateEmotion(result.emotion || 'curious');
+
+                    if (isSpeechOutputEnabled && selectedMode !== 'deaf') {
+                        await this.speak(desc);
+                        
+                        if (selectedMode === 'visually-impaired') {
+                            setTimeout(() => {
+                                if (!this.isListening) this.toggleSpeechInput();
+                            }, 1000);
+                        }
+                    } else {
+                        this.updateStatus('Ready');
+                    }
+
+                } catch (err) {
+                    console.error('Image error:', err);
+                    this.showTypingIndicator(false);
+                    this.addMessage('ai', 'Image error.');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ==================== SPEECH RECOGNITION ====================
+        initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                this.recognition = new SR();
+                this.recognition.continuous = false;
+                this.recognition.interimResults = false;
+                this.recognition.lang = getSpeechRecognitionLang();
+
+                this.recognition.onstart = () => {
+                    this.isListening = true;
+                    this.updateStatus('🎤 Listening...');
+                    const btn = document.getElementById('micButton');
+                    if (btn) { 
+                        btn.classList.add('listening'); 
+                        btn.textContent = '🔴'; 
+                    }
+                };
+
+                this.recognition.onresult = (e) => {
+                    const transcript = e.results[0][0].transcript;
+                    console.log('📝 Transcribed:', transcript);
+                    this.processUserInput(transcript);
+                };
+
+                this.recognition.onerror = (e) => {
+                    console.error('Speech error:', e);
+                    this.resetMicButton();
+                };
+                
+                this.recognition.onend = () => {
+                    this.resetMicButton();
+                };
+            }
+        }
+
+        sendTextMessage() {
+            const inp = document.getElementById('chatInput');
+            if (!inp) return;
+            const text = inp.value.trim();
+            if (text) {
+                this.processUserInput(text);
+                inp.value = '';
+            }
+        }
+
+        toggleSpeechInput() {
+            if (this.recognition) {
+                if (this.isListening) {
+                    this.recognition.stop();
+                } else {
+                    this.recognition.lang = getSpeechRecognitionLang();
+                    this.recognition.start();
+                }
+            }
+        }
+
+        toggleSpeechOutput() {
+            isSpeechOutputEnabled = !isSpeechOutputEnabled;
+            const btn = document.getElementById('speechOutputButton');
+            if (btn) {
+                btn.textContent = isSpeechOutputEnabled ? '🔊' : '🔇';
+                btn.classList.toggle('muted', !isSpeechOutputEnabled);
+            }
+            
+            // Stop current speech if muting
+            if (!isSpeechOutputEnabled && 'speechSynthesis' in window) {
+                speechSynthesis.cancel();
+                this.stopLipSync();
+            }
+            
+            console.log(`🔊 Speech output: ${isSpeechOutputEnabled ? 'ON' : 'OFF'}`);
+        }
+
+        addMessage(type, text) {
+            const cd = document.getElementById('chatDisplay');
+            if (!cd) return;
+            const div = document.createElement('div');
+            div.className = `message ${type}-message`;
+            div.innerHTML = `<strong>${type === 'user' ? 'You' : 'AI'}:</strong> ${text}`;
+            cd.appendChild(div);
+            cd.scrollTop = cd.scrollHeight;
+        }
+
+        showTypingIndicator(show) {
+            const ind = document.getElementById('typingIndicator');
+            if (ind) {
+                if (show) ind.classList.add('active');
+                else ind.classList.remove('active');
+            }
+        }
+
+        updateStatus(text) {
+            const s = document.getElementById('status');
+            if (s) s.textContent = text;
+        }
+
+        showCaption(text) {
+            const cap = document.getElementById('live-caption');
+            if (!cap) return;
+            cap.textContent = text;
+            cap.style.display = 'block';
+            setTimeout(() => cap.style.display = 'none', Math.max(5000, text.length * 100));
+        }
+
+        resetMicButton() {
+            const btn = document.getElementById('micButton');
+            if (btn) { 
+                btn.classList.remove('listening'); 
+                btn.textContent = '🎤'; 
+            }
+            this.isListening = false;
+        }
+
+        onWindowResize() {
+            const c = document.getElementById('avatar-container');
+            if (c && this.renderer) {
+                this.camera.aspect = c.clientWidth / c.clientHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(c.clientWidth, c.clientHeight);
+            }
+        }
+
+        animate() {
+            requestAnimationFrame(() => this.animate());
+            if (this.mixer) this.mixer.update(this.clock.getDelta());
+            if (this.renderer) this.renderer.render(this.scene, this.camera);
+        }
+
+        destroy() {
+            if (this.idleAnimationInterval) clearInterval(this.idleAnimationInterval);
+            if (this.blinkInterval) clearTimeout(this.blinkInterval);
+            if (this.lipSyncInterval) clearInterval(this.lipSyncInterval);
+            if (this.headMovementInterval) clearInterval(this.headMovementInterval);
+            if (this.headNodInterval) clearInterval(this.headNodInterval);
+            if (this.handGestureInterval) clearInterval(this.handGestureInterval);
+            
+            this.stopVisionMonitoring();
+            
+            if (this.renderer) this.renderer.dispose();
+        }
+    }
+
+    // ==================== INITIALIZATION ====================
+    document.addEventListener('DOMContentLoaded', () => {
+        const langSel = document.getElementById('language-select');
+        const modeBtns = document.querySelectorAll('.selection-button');
+        const startBtn = document.getElementById('start-chat-btn');
+
+        if (langSel) {
+            langSel.addEventListener('change', (e) => {
+                selectedLanguage = e.target.value;
+                console.log(`✅ Language: ${selectedLanguage}`);
+                
+                // Reset detected language when manually selected
+                if (selectedLanguage !== 'auto') {
+                    detectedLanguage = selectedLanguage;
+                }
+                
+                langSel.style.transform = 'scale(1.05)';
+                setTimeout(() => langSel.style.transform = 'scale(1)', 200);
+            });
+        }
+
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                modeBtns.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedMode = btn.dataset.mode;
+                // Reset vision mode state
+                hasGreeted = false;
+                isVisionMonitoringActive = false;
+                
+                // ✅ DISABLE SPEECH OUTPUT FOR DEAF MODE
+                if (selectedMode === 'deaf') {
+                    isSpeechOutputEnabled = false;
+                    console.log('🔇 Deaf mode: Speech output disabled');
+                } else {
+                    isSpeechOutputEnabled = true;
+                    console.log('🔊 Speech output enabled');
+                }
+                
+                console.log(`✅ Mode: ${selectedMode}`);
+            });
+        });
+
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                console.log('🚀 Starting...');
+                console.log(`   Language: ${selectedLanguage}`);
+                console.log(`   Mode: ${selectedMode}`);
+                
+                document.getElementById('welcome-page').classList.remove('active');
+                document.getElementById('main-chat-page').classList.add('active');
+                
+                initializeWebSocket();
+                
+                if (!window.digitalHuman) {
+                    window.digitalHuman = new AdvancedDigitalHuman();
+                    
+                    // ✅ AUTO-START VISION FOR VISUALLY IMPAIRED
+                    setTimeout(() => {
+                        if (selectedMode === 'visually-impaired' && window.digitalHuman) {
+                            window.digitalHuman.startVisionAssistMode();
+                        }
+                    }, 3000);
+                }
+            });
+        }
+
+        const defMode = document.querySelector('.selection-button[data-mode="normal"]');
+        if (defMode) {
+            defMode.classList.add('selected');
+        }
+
+        const chatInp = document.getElementById('chatInput');
+        if (chatInp) {
+            chatInp.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey && window.digitalHuman) {
+                    e.preventDefault();
+                    window.digitalHuman.sendTextMessage();
+                }
+            });
+        }
+
+        document.getElementById('sendButton')?.addEventListener('click', () => window.digitalHuman?.sendTextMessage());
+        document.getElementById('micButton')?.addEventListener('click', () => window.digitalHuman?.toggleSpeechInput());
+        document.getElementById('speechOutputButton')?.addEventListener('click', () => window.digitalHuman?.toggleSpeechOutput());
+        
+        const imgInp = document.getElementById('imageInput');
+        if (imgInp) {
+            imgInp.addEventListener('change', (e) => {
+                const f = e.target.files[0];
+                if (f && window.digitalHuman) {
+                    window.digitalHuman.handleImageUpload(f);
+                    e.target.value = '';
+                }
+            });
+        }
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (window.digitalHuman) {
+            window.digitalHuman.destroy();
+        }
+        if (socket) {
+            socket.disconnect();
+        }
+    });
+</script>
+
+</body>
+</html>
