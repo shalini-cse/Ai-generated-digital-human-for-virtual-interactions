@@ -10,14 +10,6 @@ TIMEOUT = 20
 # ✅ TRY IMPORTING OLLAMA WITH ERROR HANDLING
     
     return "neutral", 0.5
-
-def ask_phi(message: str, lang: str = "en", timeout: int = TIMEOUT) -> str:
-    """
-    ✅ FIXED: Ask Phi AI with proper error handling
-    """
-    if not OLLAMA_AVAILABLE:
-        logger.error("❌ Ollama library not available")
-        return "AI service is not available. Please contact administrator."
     
     for attempt in range(MAX_RETRIES + 1):
         try:
@@ -158,39 +150,6 @@ if __name__ == "__main__":
         print("\n🔧 SOLUTION:")
         print("   pip uninstall ollama")
         print("   pip install ollama")
-        exit(1)
-    
-    # Test Ollama connection
-    print("=" * 70)
-    print("TEST 1: Checking Ollama connection...")
-    try:
-        models = ollama.list()
-        print("✅ Ollama is running")
-        print(f"📦 Available models:")
-        if hasattr(models, 'models'):
-            for model in models.models:
-                print(f"   - {model.model if hasattr(model, 'model') else model}")
-        else:
-            print(f"   {models}")
-    except Exception as e:
-        print(f"❌ Ollama connection failed: {type(e).__name__}: {e}")
-        print("\n🔧 SOLUTION:")
-        print("   1. Check if Ollama is running: ollama list")
-        print("   2. If you see 'port in use' error, Ollama IS running")
-        print("   3. Test directly: ollama run phi 'Hello'")
-        exit(1)
-    
-    # Test English
-    print("\n" + "=" * 70)
-    print("TEST 2: English query")
-    try:
-        start = time.time()
-        reply, emotion, intensity = ask_phi_with_emotion("Hello, how are you?", lang="en")
-        elapsed = time.time() - start
-        print(f"✅ Response ({elapsed:.2f}s): {reply}")
-        print(f"   Emotion: {emotion} ({intensity})")
-    except Exception as e:
-        print(f"❌ Failed: {type(e).__name__}: {e}")
     
     # Test Hindi
     print("\n" + "=" * 70)
